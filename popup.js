@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
             transcriptDiv.textContent = `Error: ${response.error}`;
           } else {
             const transcript = response.transcript.map(item => item.text).join('\n');
-            transcriptDiv.innerHTML = transcript;
+            transcriptDiv.innerText = transcript;
           }
         });
       });
