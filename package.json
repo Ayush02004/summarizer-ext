@@ -20,8 +20,6 @@
         "webpack-cli": "^5.1.4"
     },
     "dependencies": {
-        "html-to-text": "^9.0.5",
-        "summarizer": "file:",
-        "youtube-dl-exec": "^3.0.10"
+        "summarizer": "file:"
     }
 }
