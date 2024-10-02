@@ -1,3 +1,25 @@
 {
-    "type": "module"
-  }
+    "name": "summarizer",
+    "version": "1.0.0",
+    "main": "background.js",
+    "directories": {
+        "lib": "lib"
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "webpack"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "devDependencies": {
+        "web": "^0.0.2",
+        "webpack": "^5.95.0",
+        "webpack-bundle-analyzer": "^4.10.2",
+        "webpack-cli": "^5.1.4"
+    },
+    "dependencies": {
+        "summarizer": "file:"
+    }
+}
