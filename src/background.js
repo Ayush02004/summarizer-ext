@@ -1,31 +1,16 @@
-import { YoutubeTranscript } from 'youtube-transcript';
-import he from 'he';
+import { YouTubeTranscriptEnhancer } from './transcript.js';
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getTranscript") {
     const { url } = request;
-    getTranscript(url).then(transcript => {
-      console.log('Transcript:', transcript);
+    const enhancer = new YouTubeTranscriptEnhancer(url);
+    enhancer.enhance_transcript().then(transcript => {
+      console.log('Enhanced Transcript:', transcript);
       sendResponse({ transcript });
     }).catch(error => {
-      console.error('Error fetching transcript:', error);
+      console.error('Error enhancing transcript:', error);
       sendResponse({ error: error.message });
     });
     return true; // Keep the message channel open for sendResponse
   }
 });
-
-
-async function getTranscript(url) {
-  try {
-    const transcript = await YoutubeTranscript.fetchTranscript(url);
-    const decodedTranscript = transcript.map(item => ({
-      ...item,
-      text: he.decode(item.text)
-    }));
-    return decodedTranscript;
-  } catch (error) {
-    console.error('Error fetching transcript:', error);
-    throw error;
-  }
-}
