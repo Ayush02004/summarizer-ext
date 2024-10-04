@@ -10,16 +10,7 @@ module.exports = {
     stats: {
         // errorDetails: true
     },
-    resolve: {
-        fallback: {
-            "stream": require.resolve("stream-browserify"),
-            "http": require.resolve("stream-http"),
-            "https": require.resolve("https-browserify"),
-            "timers": require.resolve("timers-browserify"),
-            "querystring": require.resolve("querystring-es3"),
-            "vm": require.resolve("vm-browserify"),
-            "string_decoder": require.resolve("string_decoder/"),
-            "url": require.resolve("url/")
-          },
-    },
+    devServer: {
+        port: 9000
+    }
 };

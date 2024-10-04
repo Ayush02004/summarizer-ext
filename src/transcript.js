@@ -3,12 +3,14 @@ import { YoutubeTranscript } from 'youtube-transcript';
 import he from 'he';
 import { convert } from 'html-to-text';
 // import youtubedl from 'youtube-dl-exec';
-import ytdl from 'ytdl-core';
+// import ytdl from 'ytdl-core';
 
 class YouTubeTranscriptEnhancer {
   constructor(video_url) {
     this.video_url = video_url;
-    this.transcript = this.get_transcript(this.video_url);
+    this.transcript = null;
+    // console.log("constructor")
+    // console.log(Array.isArray(this.transcript));
     this.metadata = null; // Metadata will be loaded conditionally (only if it's needed)
   }
 
@@ -23,6 +25,7 @@ class YouTubeTranscriptEnhancer {
         ...item,
         text: convertHtmlToPlainText(item.text)
       }));
+      console.log(Array.isArray(plainTextTranscript));
       return plainTextTranscript;
     } catch (error) {
       console.error('Error fetching transcript:', error);
@@ -47,14 +50,16 @@ class YouTubeTranscriptEnhancer {
     }
   }
 
-  async get_segments(video_url, categories) {
+    async get_segments(video_url, categories) {
     const url = "https://sponsor.ajay.app/api/skipSegments";
-    const params = new URLSearchParams({
-      videoID: new URL(video_url).searchParams.get('v'),
-      category: categories
-    });
+    const videoID = new URL(video_url).searchParams.get('v');
+    const params = new URLSearchParams({ videoID });
+  
+    // Append each category separately
+    categories.forEach(category => params.append('category', category));
   
     const response = await fetch(`${url}?${params.toString()}`);
+    console.log("sponsor Response: ", response);
     if (response.ok) {
       const data = await response.json();
       return data;
@@ -82,10 +87,10 @@ class YouTubeTranscriptEnhancer {
             const chapter = chapters[chapter_index];
             const segment_header = `Chapter: ${chapter_index + 1} Title: ${chapter.title}`;
             enhanced_transcript.push({ text: segment_header, start: chapter.start_time });
-            chapter_index++;
-          }
           enhanced_transcript.push(text);
-        }
+        }  chapter_index++;
+          }
+          
       } else {
         enhanced_transcript.push(...this.transcript);
       }
@@ -95,30 +100,59 @@ class YouTubeTranscriptEnhancer {
     this.transcript = enhanced_transcript;
   }
 
-  async enhance_transcript(remove_sponsor = true, remove_selfpromo = true, remove_interaction = true, add_title = true, add_chapters = true) {
+    async enhance_transcript(remove_sponsor = true, remove_selfpromo = true, remove_interaction = true, add_title = false, add_chapters = false) {
     if (!this.video_url) {
       return "";
     }
-
+  
+    // Fetch the transcript
+    this.transcript = await this.get_transcript(this.video_url);
+  
+    console.log("Before: " + this.transcript.map(item => item.text).join(" "));
+  
+    // Ensure the transcript is an array
+    if (!Array.isArray(this.transcript)) {
+      throw new TypeError('this.transcript is not an array');
+    }
+  
+    // Add metadata if required
     if (add_title || add_chapters) {
       await this.add_metadata_to_transcript(add_title, add_chapters);
     }
-
+  
+    // Determine which segments to retrieve based on the flags
     const categories = [];
     if (remove_sponsor) categories.push('sponsor');
     if (remove_selfpromo) categories.push('selfpromo');
     if (remove_interaction) categories.push('interaction');
-
+  
+    // Get the required segments in a single request
     const segments_to_remove = await this.get_segments(this.video_url, categories);
-
-    this.transcript = this.transcript.filter(text => 
-      !segments_to_remove.some(segment => segment.segment[0] <= text.start && text.start <= segment.segment[1])
-    ).map(text => text.text).join(" ");
-
+    console.log('original transcript:', this.transcript);
+    console.log("Segments to remove: ", segments_to_remove);
+  
+    // Filter the transcript to remove segments
+    const filtered_transcript = [];
+    for (const text of this.transcript) {
+      let should_remove = false;
+      for (const segment of segments_to_remove) {
+        const [start, end] = segment.segment;
+        if (start <= text.start && text.start <= end) {
+          should_remove = true;
+          break;
+        }
+      }
+      if (!should_remove) {
+        filtered_transcript.push(text.text);
+      }
+    }
+  
+    this.transcript = filtered_transcript.join(" ");
+  
+    console.log("After: " + this.transcript);
     return this.transcript;
   }
 }
-
 function convertHtmlToPlainText(html) {
   return convert(html, {
     wordwrap: 130
