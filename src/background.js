@@ -1,5 +1,6 @@
 import { YouTubeTranscriptEnhancer } from './transcript.js';
-// import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import {marked} from "marked";
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getTranscript") {
@@ -17,4 +18,5 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// export {GoogleGenerativeAI};
+export {GoogleGenerativeAI};
+export {marked};

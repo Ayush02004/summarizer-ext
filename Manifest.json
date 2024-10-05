@@ -5,17 +5,19 @@
   "description": "Summarizes YouTube video transcripts.",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "sidePanel"
   ],
   "background": {
     "service_worker": "./dist/compiled.js",
     "type": "module"
   },
-
   "action": {
     "default_popup": "popup.html"
   },
-
+  "side_panel": {
+    "default_path": "popup.html"
+  },
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],

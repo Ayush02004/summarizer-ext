@@ -6,9 +6,24 @@
     body {
       font-family: Arial, sans-serif;
       padding: 10px;
+      max-width: 400px;
+      max-height: 600px;
+      overflow: auto;
     }
     #transcript {
       white-space: pre-wrap;
+    }
+    .query-container {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    #queryInput {
+      flex: 1;
+      margin-right: 10px;
+    }
+    p {
+      margin: 1px; /* Adjust the margin to decrease spacing between paragraphs */
     }
   </style>
 </head>
@@ -16,6 +31,10 @@
   <h1>YouTube Transcript</h1>
   <button id="summarize">Summarize</button>
   <div id="transcript"></div>
-  <script src="popup.js"></script>
+  <div class="query-container">
+    <input type="text" id="query" placeholder="query">
+    <button id="queryButton">Query</button>
+  </div>
+  <script type="module" src="popup.js"></script>
 </body>
 </html>
