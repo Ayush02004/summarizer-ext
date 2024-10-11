@@ -137,7 +137,8 @@ class YouTubeTranscriptEnhancer {
       let should_remove = false;
       for (const segment of segments_to_remove) {
         const [start, end] = segment.segment;
-        if (start <= text.start && text.start <= end) {
+        console.log("start: ", start, "end: ", end, "text:", text.text, "text.offset: ", text.offset, "text.end: ", text.duration+text.offset);
+        if (text.offset >= start  && text.offset <= end) {
           should_remove = true;
           break;
         }

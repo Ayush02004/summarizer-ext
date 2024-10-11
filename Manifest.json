@@ -23,5 +23,6 @@
       "matches": ["https://www.youtube.com/*"],
       "js": ["content.js"]
     }
-  ]
+  ],
+  "options_page": "options.html"
 }
