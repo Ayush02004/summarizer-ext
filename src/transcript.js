@@ -128,8 +128,8 @@ class YouTubeTranscriptEnhancer {
   
     // Get the required segments in a single request
     const segments_to_remove = await this.get_segments(this.video_url, categories);
-    console.log('original transcript:', this.transcript);
-    console.log("Segments to remove: ", segments_to_remove);
+    // console.log('original transcript:', this.transcript);
+    // console.log("Segments to remove: ", segments_to_remove);
   
     // Filter the transcript to remove segments
     const filtered_transcript = [];
@@ -137,7 +137,7 @@ class YouTubeTranscriptEnhancer {
       let should_remove = false;
       for (const segment of segments_to_remove) {
         const [start, end] = segment.segment;
-        console.log("start: ", start, "end: ", end, "text:", text.text, "text.offset: ", text.offset, "text.end: ", text.duration+text.offset);
+        // console.log("start: ", start, "end: ", end, "text:", text.text, "text.offset: ", text.offset, "text.end: ", text.duration+text.offset);
         if (text.offset >= start  && text.offset <= end) {
           should_remove = true;
           break;
