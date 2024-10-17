@@ -5,6 +5,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const summarizeButton = document.getElementById('summarize');
   const queryButton = document.getElementById('queryButton');
   const queryInput = document.getElementById('query');
+  const transcriptDiv = document.getElementById('transcript');
+
+  // Request the current state from the background script
+  chrome.runtime.sendMessage({ type: 'getState' }, (response) => {
+    if (response) {
+      queryInput.value = response.query || '';
+      transcriptDiv.innerHTML = response.transcriptHTML || '';
+      if (response.summarizeButtonHidden) {
+        summarizeButton.style.display = 'none';
+      }
+    }
+  });
 
   summarizeButton.addEventListener('click', () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -27,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const url = results[0].result.url;
         chrome.runtime.sendMessage({ action: "getTranscript", url }, async (response) => {
-          const transcriptDiv = document.getElementById('transcript');
           if (response.error) {
             transcriptDiv.textContent = `Error: ${response.error}`;
           } else {
@@ -49,6 +60,18 @@ document.addEventListener('DOMContentLoaded', () => {
               console.error('Error getting summary:', error);
               transcriptDiv.textContent = `Error: ${error.message}`;
             }
+
+            // Update the state in the background script
+            const newState = {
+              query: queryInput.value,
+              transcriptHTML: transcriptDiv.innerHTML,
+              summarizeButtonHidden: true
+            };
+            chrome.runtime.sendMessage({ type: 'setState', state: newState }, (response) => {
+              if (response.status === 'success') {
+                console.log('State updated successfully');
+              }
+            });
           }
         });
       });
@@ -58,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
   queryButton.addEventListener('click', async () => {
     const query = queryInput.value.trim();
     if (query) {
-      const transcriptDiv = document.getElementById('transcript');
       transcriptDiv.innerHTML += `<p><strong>Query:</strong> ${query}</p>`; // Append the query to the transcriptDiv
       try {
         await chatStreaming(chat, query, transcriptDiv); // Get the answer to the query and append it
@@ -66,9 +88,21 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Error getting query response:', error);
         transcriptDiv.innerHTML += `<p>Error: ${error.message}</p>`;
       }
+
+      // Update the state in the background script
+      const newState = {
+        query: queryInput.value,
+        transcriptHTML: transcriptDiv.innerHTML,
+        summarizeButtonHidden: summarizeButton.style.display === 'none'
+      };
+      chrome.runtime.sendMessage({ type: 'setState', state: newState }, (response) => {
+        if (response.status === 'success') {
+          console.log('State updated successfully');
+        }
+      });
     }
-  })
-});;
+  });
+});
 
 function getCurrentVideoUrl() {
   return { url: window.location.href };

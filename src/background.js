@@ -18,5 +18,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+let state = {};
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'getState') {
+    sendResponse(state);
+  } else if (request.type === 'setState') {
+    state = request.state;
+    sendResponse({ status: 'success' });
+  }
+});
+
 export {GoogleGenerativeAI};
 export {marked};
