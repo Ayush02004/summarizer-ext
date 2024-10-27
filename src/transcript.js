@@ -25,10 +25,10 @@ class YouTubeTranscriptEnhancer {
         ...item,
         text: convertHtmlToPlainText(item.text)
       }));
-      console.log(Array.isArray(plainTextTranscript));
+      // console.log(Array.isArray(plainTextTranscript));
       return plainTextTranscript;
     } catch (error) {
-      console.error('Error fetching transcript:', error);
+      // console.error('Error fetching transcript:', error);
       throw error;
     }
   }
@@ -59,7 +59,7 @@ class YouTubeTranscriptEnhancer {
     categories.forEach(category => params.append('category', category));
   
     const response = await fetch(`${url}?${params.toString()}`);
-    console.log("sponsor Response: ", response);
+    // console.log("sponsor Response: ", response);
     if (response.ok) {
       const data = await response.json();
       return data;
@@ -108,7 +108,7 @@ class YouTubeTranscriptEnhancer {
     // Fetch the transcript
     this.transcript = await this.get_transcript(this.video_url);
   
-    console.log("Before: " + this.transcript.map(item => item.text).join(" "));
+    // console.log("Before: " + this.transcript.map(item => item.text).join(" "));
   
     // Ensure the transcript is an array
     if (!Array.isArray(this.transcript)) {
@@ -150,7 +150,7 @@ class YouTubeTranscriptEnhancer {
   
     this.transcript = filtered_transcript.join(" ");
   
-    console.log("After: " + this.transcript);
+    // console.log("After: " + this.transcript);
     return this.transcript;
   }
 }
