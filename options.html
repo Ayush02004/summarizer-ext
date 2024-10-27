@@ -1,28 +1,14 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <title>Extension Settings</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 10px;
-    }
-    .setting {
-      margin-bottom: 10px;
-    }
-  </style>
-</head>
-<body>
-  <h1>Extension Settings</h1>
-  <div class="setting">
-    <label for="setting1">Setting 1:</label>
-    <input type="text" id="setting1">
-  </div>
-  <div class="setting">
-    <label for="setting2">Setting 2:</label>
-    <input type="text" id="setting2">
-  </div>
-  <button id="save">Save Settings</button>
-  <script src="options.js"></script>
-</body>
+<html lang="en">
+  <head>
+    <title>API Key Storage</title>
+  </head>
+  <body>
+    <h2>Enter API Key</h2>
+    <input type="text" id="apiKeyInput" placeholder="API Key">
+    <button id="saveButton">Save API Key</button>
+    <p id="status"></p>
+
+    <script src="options.js"></script>
+  </body>
 </html>

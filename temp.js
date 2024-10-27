@@ -1,56 +1,17 @@
 import { GoogleGenerativeAI, marked } from "./dist/compiled.js";
+let chat = initializeModel();
+console.log('chat:', chat);
 
-function getApiKey() {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get(['apiKey'], (result) => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError); // Handle any errors
-      } else if (result.apiKey) {
-        resolve(result.apiKey); // Return the API key if it exists
-      } else {
-        reject('API key not found'); // Handle missing key
-      }
-    });
-  });
-}
-
-async function initializeModel() {
-  try {
-    const apiKey = await getApiKey();
-    console.log(apiKey);
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      systemInstruction: {text: "user will provide you with the transcript of a video and you task is to give the summary of the video. the summary should contain the main topics covered in the video. If a user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor."} 
-    });
-    const chat = model.startChat({
-      history: [],
-    });
-    return chat;
-  } catch (error) {
-    console.error('Error initializing model:', error);
-    displayError(`Error initializing model: ${error}`);
-    return null;
-  }
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   const summarizeButton = document.getElementById('summarize');
   const queryButton = document.getElementById('queryButton');
   const queryInput = document.getElementById('query');
   const transcriptDiv = document.getElementById('transcript');
-  
+
   optionsButton.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
   });
-
-  // Initialize the model
-  let chat = await initializeModel();
-  if (!chat) {
-    console.error('Error initializing model');
-    return;
-  }
-
+  
   // Request the current state from the background script
   chrome.runtime.sendMessage({ type: 'getState' }, (response) => {
     if (response) {
@@ -63,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   summarizeButton.addEventListener('click', () => {
+    
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
       chrome.scripting.executeScript({
@@ -99,6 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
               summarizeButton.style.display = 'none';
               transcriptDiv.innerHTML += '<h2>Summary</h2>'; // Print "Summary" before showing the summary
+              console.log('chat:', chat);
               await chatStreaming(chat, transcript, transcriptDiv);
             } catch (error) {
               console.error('Error getting summary:', error);
@@ -157,6 +120,33 @@ function displayError(message) {
   transcriptDiv.textContent = message;
 }
 
+function getApiKey() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(['apiKey'], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError); // Handle any errors
+      } else if (result.apiKey) {
+        resolve(result.apiKey); // Return the API key if it exists
+      } else {
+        reject('API key not found'); // Handle missing key
+      }
+    });
+  });
+}
+
+async function initializeModel() {
+  // const apiKey = await getApiKey();
+  // console.log('API Key:', apiKey);
+  const genAI = new GoogleGenerativeAI("AIzaSyCgOYUyNX1O7f-U5ut6NeLQoz0JjlQGt1A");
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash",
+    systemInstruction: {text: "user will provide you with the transcript of a video and you task is to give the summary of the video. the summary should contain the main topics covered in the video. If a user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor."} 
+  });
+  const chat = model.startChat({
+    history: [],
+  });
+  return chat;
+}
 
 async function chatStreaming(chat, query, transcriptDiv) {
   let result = await chat.sendMessageStream(query);

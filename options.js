@@ -1,15 +1,19 @@
-document.getElementById('save').addEventListener('click', () => {
-  const setting1 = document.getElementById('setting1').value;
-  const setting2 = document.getElementById('setting2').value;
+document.getElementById('saveButton').addEventListener('click', () => {
+  const apiKey = document.getElementById('apiKeyInput').value;
 
-  chrome.storage.sync.set({ setting1, setting2 }, () => {
-    alert('Settings saved');
-  });
+  if (apiKey) {
+    // Save API key in chrome.storage.local
+    chrome.storage.local.set({ apiKey }, () => {
+      document.getElementById('status').textContent = 'API Key saved!';
+    });
+  } else {
+    document.getElementById('status').textContent = 'Please enter a valid API Key';
+  }
 });
 
-document.addEventListener('DOMContentLoaded', () => {
-  chrome.storage.sync.get(['setting1', 'setting2'], (result) => {
-    document.getElementById('setting1').value = result.setting1 || '';
-    document.getElementById('setting2').value = result.setting2 || '';
-  });
+// Retrieve and display the API key if it exists
+chrome.storage.local.get(['apiKey'], (result) => {
+  if (result.apiKey) {
+    document.getElementById('apiKeyInput').value = result.apiKey;
+  }
 });
