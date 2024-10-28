@@ -17,7 +17,7 @@ function getApiKey() {
 async function initializeModel() {
   try {
     const apiKey = await getApiKey();
-    console.log(apiKey);
+    // console.log(apiKey);
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
@@ -39,6 +39,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const queryButton = document.getElementById('queryButton');
   const queryInput = document.getElementById('query');
   const transcriptDiv = document.getElementById('transcript');
+  const video = document.querySelector('video');
+  const startTimeDiv = document.getElementById('startTime');
+  const endTimeDiv = document.getElementById('endTime');
   
   optionsButton.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
@@ -61,7 +64,37 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   });
+  let start_time = null;
+  let end_time = null;
+  function formatTime(seconds) {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hrs > 0 ? hrs + ' hr ' : ''}${mins > 0 ? mins + ' min ' : ''}${secs > 0 ? secs + ' sec' : ''}`;
+  }
 
+  startTimeButton.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ action: 'getVideoTimestamp' }, (response) => {
+      if (response.error) {
+        startTimeDiv.textContent = response.error;
+      } else {
+        start_time = response.currentTime;
+        startTimeDiv.textContent = `Start Time: ${formatTime(start_time)}`;
+      }
+    });
+  });
+
+  endTimeButton.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ action: 'getVideoTimestamp' }, (response) => {
+      if (response.error) {
+        endTimeDiv.textContent = response.error;
+      } else {
+        end_time = response.currentTime;
+        endTimeDiv.textContent = `End Time: ${formatTime(end_time)}`;
+      }
+    });
+  });
+  
   summarizeButton.addEventListener('click', () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];

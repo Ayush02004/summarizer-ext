@@ -6,7 +6,7 @@
       font-family: Arial, sans-serif;
       width: 500px;
       overflow: auto;
-      font-size:15px;
+      font-size: 15px;
     }
     .query-container {
       display: flex;
@@ -20,6 +20,17 @@
     p {
       margin: 1px; /* Adjust the margin to decrease spacing between paragraphs */
     }
+    .button-container {
+      margin-top: 10px;
+    }
+    .inline-container {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .inline-container div {
+      margin-left: 10px;
+    }
   </style>
 </head>
 <body>
@@ -29,7 +40,17 @@
     <input type="text" id="query" placeholder="query">
     <button id="queryButton">Query</button>
   </div>
-  <button id = "optionsButton">Options</button>
+  <div class="button-container">
+    <button id="optionsButton">Options</button>
+  </div>
+  <div class="inline-container">
+    <button id="startTimeButton">Start time</button>
+    <div id="startTime"></div>
+  </div>
+  <div class="inline-container">
+    <button id="endTimeButton">End time</button>
+    <div id="endTime"></div>
+  </div>
   <script type="module" src="popup.js"></script>
 </body>
 </html>
