@@ -1,1 +1,4 @@
 add selection for video segments to get summary
+splitting video transcription for longer videos (take start and end time for the segment of the video to summarize)
+page summarization
+add summary cashing (in the browser)

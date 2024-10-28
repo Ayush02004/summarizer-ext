@@ -14,9 +14,9 @@ class YouTubeTranscriptEnhancer {
     this.metadata = null; // Metadata will be loaded conditionally (only if it's needed)
   }
 
-  async get_transcript(video_url) {
+  async get_transcript(video_url, language = 'en') {
     try {
-      const transcript = await YoutubeTranscript.fetchTranscript(video_url);
+      const transcript = await YoutubeTranscript.fetchTranscript(video_url, { lang: language });
       const decodedTranscript = transcript.map(item => ({
         ...item,
         text: he.decode(item.text)
