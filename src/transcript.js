@@ -100,58 +100,63 @@ class YouTubeTranscriptEnhancer {
     this.transcript = enhanced_transcript;
   }
 
-    async enhance_transcript(remove_sponsor = true, remove_selfpromo = true, remove_interaction = true, add_title = false, add_chapters = false) {
-    if (!this.video_url) {
-      return "";
-    }
-  
-    // Fetch the transcript
-    this.transcript = await this.get_transcript(this.video_url);
-  
-    // console.log("Before: " + this.transcript.map(item => item.text).join(" "));
-  
-    // Ensure the transcript is an array
-    if (!Array.isArray(this.transcript)) {
-      throw new TypeError('this.transcript is not an array');
-    }
-  
-    // Add metadata if required
-    if (add_title || add_chapters) {
-      await this.add_metadata_to_transcript(add_title, add_chapters);
-    }
-  
-    // Determine which segments to retrieve based on the flags
-    const categories = [];
-    if (remove_sponsor) categories.push('sponsor');
-    if (remove_selfpromo) categories.push('selfpromo');
-    if (remove_interaction) categories.push('interaction');
-  
-    // Get the required segments in a single request
-    const segments_to_remove = await this.get_segments(this.video_url, categories);
-    // console.log('original transcript:', this.transcript);
-    // console.log("Segments to remove: ", segments_to_remove);
-  
-    // Filter the transcript to remove segments
-    const filtered_transcript = [];
-    for (const text of this.transcript) {
-      let should_remove = false;
-      for (const segment of segments_to_remove) {
-        const [start, end] = segment.segment;
-        // console.log("start: ", start, "end: ", end, "text:", text.text, "text.offset: ", text.offset, "text.end: ", text.duration+text.offset);
-        if (text.offset >= start  && text.offset <= end) {
-          should_remove = true;
-          break;
+    async enhance_transcript(remove_sponsor = true, remove_selfpromo = true, remove_interaction = true, add_title = false, add_chapters = false, start_time = null, end_time = null) {
+      if (!this.video_url) {
+        return "";
+      }
+    
+      // Fetch the transcript
+      this.transcript = await this.get_transcript(this.video_url);
+    
+      // Ensure the transcript is an array
+      if (!Array.isArray(this.transcript)) {
+        throw new TypeError('this.transcript is not an array');
+      }
+    
+      // Add metadata if required
+      if (add_title || add_chapters) {
+        await this.add_metadata_to_transcript(add_title, add_chapters);
+      }
+    
+      // Determine which segments to retrieve based on the flags
+      const categories = [];
+      if (remove_sponsor) categories.push('sponsor');
+      if (remove_selfpromo) categories.push('selfpromo');
+      if (remove_interaction) categories.push('interaction');
+    
+      // Get the required segments in a single request
+      const segments_to_remove = await this.get_segments(this.video_url, categories);
+    
+      // Filter the transcript to remove segments
+      const filtered_transcript = [];
+      for (const text of this.transcript) {
+        let should_remove = false;
+        for (const segment of segments_to_remove) {
+          console.log("segment: ", segment);
+          const [start, end] = segment.segment;
+          if (text.offset >= start  && text.offset <= end) {
+            should_remove = true;
+            break;
+          }
+        }
+        if (!should_remove) {
+          filtered_transcript.push(text);
         }
       }
-      if (!should_remove) {
-        filtered_transcript.push(text.text);
+    
+      // Filter the transcript based on start_time and end_time if provided
+      if (start_time !== null && end_time !== null) {
+        this.transcript = filtered_transcript.filter(text => text.offset >= start_time && (text.offset + text.duration) <= end_time);
+      } else {
+        this.transcript = filtered_transcript;
       }
-    }
-  
-    this.transcript = filtered_transcript.join(" ");
-  
-    // console.log("After: " + this.transcript);
-    return this.transcript;
+    
+      // Join the filtered transcript texts
+      this.transcript = this.transcript.map(text => text.text).join(" ");
+      console.log("start_time: ", start_time);
+      console.log("end_time: ", end_time);
+      console.log("timed transcript: ", this.transcript);
+      return this.transcript;
   }
 }
 function convertHtmlToPlainText(html) {

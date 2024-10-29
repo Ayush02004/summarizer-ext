@@ -21,7 +21,7 @@ async function initializeModel() {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
-      systemInstruction: {text: "user will provide you with the transcript of a video and you task is to give the summary of the video. the summary should contain the main topics covered in the video. If a user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor."} 
+      systemInstruction: {text: "user will provide you with the transcript of a video or the transcript for a segment of a video and your task is to give the summary of the video. the summary should contain the main topics covered in the video. If a user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor."} 
     });
     const chat = model.startChat({
       history: [],
@@ -39,9 +39,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const queryButton = document.getElementById('queryButton');
   const queryInput = document.getElementById('query');
   const transcriptDiv = document.getElementById('transcript');
-  const video = document.querySelector('video');
   const startTimeDiv = document.getElementById('startTime');
   const endTimeDiv = document.getElementById('endTime');
+  const resetTimeButton = document.getElementById('resettime');
   
   optionsButton.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
@@ -59,14 +59,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (response) {
       queryInput.value = response.query || '';
       transcriptDiv.innerHTML = response.transcriptHTML || '';
+      // startTimeDiv.innerHTML = response.starttimeHTML || '';
+      // endTimeDiv.innerHTML = response.endtimeHTML || '';
       if (response.summarizeButtonHidden) {
         summarizeButton.style.display = 'none';
       }
     }
   });
+
+  // Add event listener for the reload button
+  reloadButton.addEventListener('click', () => {
+    resetState();
+  });
+
+  // Function to reset the state
+  function resetState() {
+    queryInput.value = '';
+    transcriptDiv.innerHTML = '';
+    summarizeButton.style.display = 'block';
+    start_time = null;
+    end_time = null;
+    startTimeDiv.textContent = '';
+    endTimeDiv.textContent = '';
+    // Clear the state in the background script
+    chrome.runtime.sendMessage({ type: 'clearState' }, (response) => {
+      if (response.status === 'success') {
+        console.log('State cleared successfully');
+      }
+    });
+  }
+
+
   let start_time = null;
   let end_time = null;
   function formatTime(seconds) {
+    if (seconds == 0){
+      return '0 sec';
+    }
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
@@ -79,6 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         startTimeDiv.textContent = response.error;
       } else {
         start_time = response.currentTime;
+        console.log("start time popup sdioafoi: ", start_time);
         startTimeDiv.textContent = `Start Time: ${formatTime(start_time)}`;
       }
     });
@@ -94,7 +124,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   });
-  
+
+  resetTimeButton.addEventListener('click', () => {
+    start_time = null;
+    startTimeDiv.textContent = '';
+    end_time = null;
+    endTimeDiv.textContent = '';
+  });
+
   summarizeButton.addEventListener('click', () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
@@ -107,15 +144,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           displayError(`Script execution failed: ${chrome.runtime.lastError.message}`);
           return;
         }
-
         if (!results || results.length === 0 || !results[0].result) {
           console.error('No results returned from script execution');
           displayError('No results returned from script execution');
           return;
         }
-
         const url = results[0].result.url;
-        chrome.runtime.sendMessage({ action: "getTranscript", url }, async (response) => {
+        console.log("start time popup: ", start_time);
+        console.log("end time popup: ", end_time);
+        chrome.runtime.sendMessage({ action: "getTranscript", url, start_time, end_time }, async (response) => {
           if (response.error) {
             transcriptDiv.textContent = `Error: ${response.error}`;
           } else {

@@ -2,11 +2,17 @@ import { YouTubeTranscriptEnhancer } from './transcript.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { marked } from "marked";
 
+chrome.action.onClicked.addListener((tab) => {
+      chrome.sidePanel.open({ windowId: tab.windowId }).catch((error) => console.error(error));
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getTranscript") {
-    const { url } = request;
+    const { url, start_time, end_time } = request;
+    console.log("start time background: ", start_time);
+    console.log("end time background: ", end_time);
     const enhancer = new YouTubeTranscriptEnhancer(url);
-    enhancer.enhance_transcript().then(transcript => {
+    enhancer.enhance_transcript(true, true, true, false, false, start_time, end_time).then(transcript => {
       sendResponse({ transcript });
     }).catch(error => {
       console.error('Error enhancing transcript:', error);
