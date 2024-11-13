@@ -201,6 +201,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   queryButton.addEventListener('click', async () => {
     const query = queryInput.value.trim();
     if (query) {
+      // Clear the query input
+      queryInput.value = '';
+      queryButton.disabled = true;
       transcriptDiv.innerHTML += `<p><strong>Query:</strong> ${query}</p>`; // Append the query to the transcriptDiv
       try {
         await chatStreaming(chat, query, transcriptDiv); // Get the answer to the query and append it
@@ -208,6 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error getting query response:', error);
         transcriptDiv.innerHTML += `<p>Error: ${error.message}</p>`;
       }
+
 
       // Update the state in the background script
       const newState = {
@@ -223,6 +227,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
   });
+
+  queryInput.addEventListener('input', () => {
+    queryButton.disabled = queryInput.value.trim() === '';
+  });
+
+  queryInput.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter' && queryInput.value.trim() !== '') {
+      queryButton.click();
+    }
+  });
+
+  queryButton.disabled = queryInput.value.trim() === '';
+
 });
 
 function getCurrentVideoUrl() {
