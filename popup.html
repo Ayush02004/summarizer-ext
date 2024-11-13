@@ -1,59 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
+  <title>Popup</title>
+  <link rel="stylesheet" href="css/bootstrap.min.css">
   <style>
     body {
       font-family: Arial, sans-serif;
-      width: 500px;
       overflow: auto;
       font-size: 15px;
+      color: #000;
+      background-color: #fff;
     }
-    .query-container {
-      display: flex;
-      align-items: center;
-      margin-top: 10px;
-    }
-    #queryInput {
-      flex: 1;
-      margin-right: 10px;
-    }
-    p {
-      margin: 1px; /* Adjust the margin to decrease spacing between paragraphs */
-    }
-    .button-container {
-      margin-top: 10px;
-    }
-    .inline-container {
-      display: flex;
-      align-items: center;
-      margin-top: 10px;
-    }
-    .inline-container div {
-      margin-left: 10px;
-    }
+    /* Your existing styles */
   </style>
 </head>
 <body>
-  <button id="reloadButton">Refresh</button>
-  <button id="summarize">Summarize</button>
-  <div id="transcript"></div>
-  <div class="query-container">
-    <input type="text" id="query" placeholder="query">
-    <button id="queryButton">Query</button>
+  <div class="container mt-3">
+    <div class="mb-3">
+      <button id="reloadButton" class="btn btn-primary">Refresh</button>
+      <button id="summarize" class="btn btn-secondary">Summarize</button>
+    </div>
+    <div id="transcript" class="mb-3"></div>
+    <div class="query-container mb-3">
+      <div class="input-group">
+        <input type="text" id="query" class="form-control" placeholder="Query">
+        <button id="queryButton" class="btn btn-outline-secondary">Query</button>
+      </div>
+    </div>
+    <div class="button-container mb-3">
+      <button id="optionsButton" class="btn btn-info">Options</button>
+    </div>
+    <div class="inline-container mb-3">
+      <button id="startTimeButton" class="btn btn-success">Start time</button>
+      <div id="startTime" class="ms-2"></div>
+    </div>
+    <div class="inline-container mb-3">
+      <button id="endTimeButton" class="btn btn-danger">End time</button>
+      <div id="endTime" class="ms-2"></div>
+    </div>
+    <button id="resettime" class="btn btn-warning">Reset</button>
   </div>
-  <div class="button-container">
-    <button id="optionsButton">Options</button>
-  </div>
-  <div class="inline-container">
-    <button id="startTimeButton">Start time</button>
-    
-    <div id="startTime"></div>
-  </div>
-  <div class="inline-container">
-    <button id="endTimeButton">End time</button>
-    <div id="endTime"></div>
-  </div>
-  <button id = "resettime">Reset</button>
+  <script src="js/bootstrap.bundle.min.js"></script>
   <script type="module" src="popup.js"></script>
 </body>
 </html>

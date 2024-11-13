@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, marked } from "./dist/compiled.js";
+import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory, marked } from "./dist/compiled.js";
 
 function getApiKey() {
   return new Promise((resolve, reject) => {
@@ -19,9 +19,17 @@ async function initializeModel() {
     const apiKey = await getApiKey();
     // console.log(apiKey);
     const genAI = new GoogleGenerativeAI(apiKey);
+    const safetySettings = [ 
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
+      // { category: HarmCategory.HARM_CATEGORY_UNSPECIFIED, threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE, },
+    ];
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      systemInstruction: {text: "user will provide you with the transcript of a video or the transcript for a segment of a video and your task is to give the summary of the video. the summary should contain the main topics covered in the video. If a user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor."} 
+      model: "gemini-1.5-flash-002",
+      systemInstruction: {text: "user will provide you with the transcript of a video or the transcript for a segment of a video and your task is to give the summary of the video. the summary should contain the main topics covered in the video. If a user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor."},
+      safetySettings
     });
     const chat = model.startChat({
       history: [],
@@ -59,6 +67,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (response) {
       queryInput.value = response.query || '';
       transcriptDiv.innerHTML = response.transcriptHTML || '';
+      // console.log("response: ", response);
+      // chat = response.chat || chat;
       // startTimeDiv.innerHTML = response.starttimeHTML || '';
       // endTimeDiv.innerHTML = response.endtimeHTML || '';
       if (response.summarizeButtonHidden) {
@@ -68,12 +78,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Add event listener for the reload button
-  reloadButton.addEventListener('click', () => {
-    resetState();
+  reloadButton.addEventListener('click', async () => {
+    await resetState();
   });
 
   // Function to reset the state
-  function resetState() {
+  async function resetState() {
     queryInput.value = '';
     transcriptDiv.innerHTML = '';
     summarizeButton.style.display = 'block';
@@ -81,12 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     end_time = null;
     startTimeDiv.textContent = '';
     endTimeDiv.textContent = '';
-    // Clear the state in the background script
-    chrome.runtime.sendMessage({ type: 'clearState' }, (response) => {
-      if (response.status === 'success') {
-        console.log('State cleared successfully');
-      }
-    });
+    chat = await initializeModel();
   }
 
 
@@ -108,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         startTimeDiv.textContent = response.error;
       } else {
         start_time = response.currentTime;
-        console.log("start time popup sdioafoi: ", start_time);
+        // console.log("start time popup sdioafoi: ", start_time);
         startTimeDiv.textContent = `Start Time: ${formatTime(start_time)}`;
       }
     });
@@ -150,8 +155,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
         }
         const url = results[0].result.url;
-        console.log("start time popup: ", start_time);
-        console.log("end time popup: ", end_time);
+        // console.log("start time popup: ", start_time);
+        // console.log("end time popup: ", end_time);
         chrome.runtime.sendMessage({ action: "getTranscript", url, start_time, end_time }, async (response) => {
           if (response.error) {
             transcriptDiv.textContent = `Error: ${response.error}`;
@@ -179,11 +184,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const newState = {
               query: queryInput.value,
               transcriptHTML: transcriptDiv.innerHTML,
-              summarizeButtonHidden: true
+              summarizeButtonHidden: true,
+              // chat: chat
             };
             chrome.runtime.sendMessage({ type: 'setState', state: newState }, (response) => {
               if (response.status === 'success') {
-                console.log('State updated successfully');
+                // console.log('State updated successfully');
               }
             });
           }
@@ -207,11 +213,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       const newState = {
         query: queryInput.value,
         transcriptHTML: transcriptDiv.innerHTML,
-        summarizeButtonHidden: summarizeButton.style.display === 'none'
+        summarizeButtonHidden: summarizeButton.style.display === 'none',
+        // chat: chat
       };
       chrome.runtime.sendMessage({ type: 'setState', state: newState }, (response) => {
         if (response.status === 'success') {
-          console.log('State updated successfully');
+          // console.log('State updated successfully');
         }
       });
     }

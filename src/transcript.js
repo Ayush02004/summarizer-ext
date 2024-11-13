@@ -132,7 +132,7 @@ class YouTubeTranscriptEnhancer {
       for (const text of this.transcript) {
         let should_remove = false;
         for (const segment of segments_to_remove) {
-          console.log("segment: ", segment);
+          // console.log("segment: ", segment);
           const [start, end] = segment.segment;
           if (text.offset >= start  && text.offset <= end) {
             should_remove = true;
@@ -153,9 +153,9 @@ class YouTubeTranscriptEnhancer {
     
       // Join the filtered transcript texts
       this.transcript = this.transcript.map(text => text.text).join(" ");
-      console.log("start_time: ", start_time);
-      console.log("end_time: ", end_time);
-      console.log("timed transcript: ", this.transcript);
+      // console.log("start_time: ", start_time);
+      // console.log("end_time: ", end_time);
+      // console.log("timed transcript: ", this.transcript);
       return this.transcript;
   }
 }

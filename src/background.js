@@ -1,5 +1,5 @@
 import { YouTubeTranscriptEnhancer } from './transcript.js';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
 import { marked } from "marked";
 
 chrome.action.onClicked.addListener((tab) => {
@@ -9,8 +9,8 @@ chrome.action.onClicked.addListener((tab) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getTranscript") {
     const { url, start_time, end_time } = request;
-    console.log("start time background: ", start_time);
-    console.log("end time background: ", end_time);
+    // console.log("start time background: ", start_time);
+    // console.log("end time background: ", end_time);
     const enhancer = new YouTubeTranscriptEnhancer(url);
     enhancer.enhance_transcript(true, true, true, false, false, start_time, end_time).then(transcript => {
       sendResponse({ transcript });
@@ -27,7 +27,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
       }
       const activeTab = tabs[0];
-      console.log('Active Tab:', activeTab);
+      // console.log('Active Tab:', activeTab);
       if (!activeTab || !activeTab.id) {
         console.error('Active tab is undefined or has no id');
         sendResponse({ error: 'Active tab is undefined or has no id' });
@@ -70,6 +70,5 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ status: 'success' });
   }
 });
-
-export { GoogleGenerativeAI };
+export { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory };
 export { marked };
