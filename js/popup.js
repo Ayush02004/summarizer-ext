@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory, marked } from "./dist/compiled.js";
+import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory, marked } from "../dist/compiled.js";
 
 function getApiKey() {
   return new Promise((resolve, reject) => {

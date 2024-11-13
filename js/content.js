@@ -17,7 +17,7 @@ function appendPopupIframe() {
   frame.style.width = "100%"; // Set iframe width to 100%
   frame.style.height = "500px"; // Set height as needed
   frame.style.borderRadius = "12px";
-  frame.src = chrome.runtime.getURL("popup.html");
+  frame.src = chrome.runtime.getURL("../popup.html");
   frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals');
   popup.appendChild(frame);
 
