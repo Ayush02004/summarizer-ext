@@ -15,6 +15,7 @@ function getApiKey() {
 }
 
 async function initializeModel() {
+  // console.log("function: initializing model");
   try {
     const apiKey = await getApiKey();
     // console.log(apiKey);
@@ -27,11 +28,11 @@ async function initializeModel() {
       // { category: HarmCategory.HARM_CATEGORY_UNSPECIFIED, threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE, },
     ];
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash-002",
+      model: "gemini-1.5-flash",
       systemInstruction: {text: "user will provide you with the transcript of a video or the transcript for a segment of a video and your task is to give the summary of the video. the summary should contain the main topics covered in the video. If a user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor."},
       safetySettings
     });
-    const chat = model.startChat({
+    let chat = model.startChat({
       history: [],
     });
     return chat;
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize the model
   let chat = await initializeModel();
+  // console.log("chat initialized ", chat);
   if (!chat) {
     console.error('Error initializing model');
     return;
@@ -67,10 +69,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (response) {
       queryInput.value = response.query || '';
       transcriptDiv.innerHTML = response.transcriptHTML || '';
-      // console.log("response: ", response);
-      // chat = response.chat || chat;
-      // startTimeDiv.innerHTML = response.starttimeHTML || '';
-      // endTimeDiv.innerHTML = response.endtimeHTML || '';
       if (response.summarizeButtonHidden) {
         summarizeButton.style.display = 'none';
       }
@@ -91,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     end_time = null;
     startTimeDiv.textContent = '';
     endTimeDiv.textContent = '';
-    chat = await initializeModel();
+    // chat = await initializeModel();
   }
 
 
