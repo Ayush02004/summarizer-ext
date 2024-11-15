@@ -14,22 +14,73 @@ function getApiKey() {
   });
 }
 
-async function initializeModel() {
-  // console.log("function: initializing model");
+function fetchTranscript(start_time, end_time, transcriptDiv) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTab = tabs[0];
+      chrome.scripting.executeScript({
+        target: { tabId: activeTab.id },
+        function: getCurrentVideoUrl
+      }, (results) => {
+        if (chrome.runtime.lastError) {
+          console.error('Script execution failed:', chrome.runtime.lastError);
+          displayError(`Script execution failed: ${chrome.runtime.lastError.message}`);
+          reject(chrome.runtime.lastError);
+          return;
+        }
+        if (!results || results.length === 0 || !results[0].result) {
+          console.error('No results returned from script execution');
+          displayError('No results returned from script execution');
+          reject(new Error('No results returned from script execution'));
+          return;
+        }
+        const url = results[0].result.url;
+        chrome.runtime.sendMessage({ action: "getTranscript", url, start_time, end_time }, (response) => {
+          if (response.error) {
+            transcriptDiv.textContent = `Error: ${response.error}`;
+            reject(new Error(response.error));
+          } else {
+            let transcript;
+            if (typeof response.transcript === 'string') {
+              transcript = response.transcript;
+            } else if (Array.isArray(response.transcript)) {
+              transcript = response.transcript.map(item => item.text).join('\n');
+            } else {
+              transcriptDiv.textContent = 'Unexpected response format';
+              reject(new Error('Unexpected response format'));
+              return;
+            }
+            resolve(transcript);
+          }
+        });
+      });
+    });
+  });
+}
+
+async function initializeModel(start_time, end_time, transcriptDiv) {
+  let transcript;
   try {
-    const apiKey = await getApiKey();
-    // console.log(apiKey);
-    const genAI = new GoogleGenerativeAI(apiKey);
+    transcript = await fetchTranscript(start_time, end_time, transcriptDiv);
+  } catch (error) {
+    console.error('Error fetching transcript:', error);
+    return null;
+  }
+  console.log("transcript in initializemodel: ", transcript);
+  const apiKey = await getApiKey();
+  const genAI = new GoogleGenerativeAI(apiKey);
+  try {
     const safetySettings = [ 
-      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
-      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
-      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
-      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
-      // { category: HarmCategory.HARM_CATEGORY_UNSPECIFIED, threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE, },
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE }, 
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE }, 
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE }, 
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
     ];
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
-      systemInstruction: {text: "user will provide you with the transcript of a video or the transcript for a segment of a video and your task is to give the summary of the video. the summary should contain the main topics covered in the video. If a user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor."},
+      systemInstruction: {
+        text: `provided the transcript of a video or the transcript for a segment of a video, your task is to answer the questions based on it. If the user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor. transcript: ${transcript}`
+      },
       safetySettings
     });
     let chat = model.startChat({
@@ -51,13 +102,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const startTimeDiv = document.getElementById('startTime');
   const endTimeDiv = document.getElementById('endTime');
   const resetTimeButton = document.getElementById('resettime');
+  let start_time = null;
+  let end_time = null;
   
   optionsButton.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
   });
 
   // Initialize the model
-  let chat = await initializeModel();
+  let chat = await initializeModel(start_time, end_time);
   // console.log("chat initialized ", chat);
   if (!chat) {
     console.error('Error initializing model');
@@ -93,8 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
 
-  let start_time = null;
-  let end_time = null;
+  
   function formatTime(seconds) {
     if (seconds == 0){
       return '0 sec';
@@ -105,8 +157,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     return `${hrs > 0 ? hrs + ' hr ' : ''}${mins > 0 ? mins + ' min ' : ''}${secs > 0 ? secs + ' sec' : ''}`;
   }
 
-  startTimeButton.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ action: 'getVideoTimestamp' }, (response) => {
+  startTimeButton.addEventListener('click', async () => {
+    chrome.runtime.sendMessage({ action: 'getVideoTimestamp' }, async (response) => {
       if (response.error) {
         startTimeDiv.textContent = response.error;
       } else {
@@ -114,16 +166,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         // console.log("start time popup sdioafoi: ", start_time);
         startTimeDiv.textContent = `Start Time: ${formatTime(start_time)}`;
       }
+      if (end_time && start_time){
+        chat = await initializeModel(start_time, end_time);
+      }
     });
   });
 
-  endTimeButton.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ action: 'getVideoTimestamp' }, (response) => {
+  endTimeButton.addEventListener('click', async () => {
+    chrome.runtime.sendMessage({ action: 'getVideoTimestamp' }, async (response) => {
       if (response.error) {
         endTimeDiv.textContent = response.error;
       } else {
         end_time = response.currentTime;
         endTimeDiv.textContent = `End Time: ${formatTime(end_time)}`;
+      }
+      // console.log("start time: ", start_time, "end time: ", end_time);
+  
+      if (end_time && start_time) {
+        chat = await initializeModel(start_time, end_time, transcriptDiv);
+        // console.log("chat in end time button: ", chat);
       }
     });
   });
@@ -291,3 +352,4 @@ async function chatStreaming(chat, query, transcriptDiv) {
     responseContainer.innerHTML += strippedHtml;
   }
 }
+
