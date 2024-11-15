@@ -66,7 +66,7 @@ async function initializeModel(start_time, end_time, transcriptDiv) {
     console.error('Error fetching transcript:', error);
     return null;
   }
-  console.log("transcript in initializemodel: ", transcript);
+  // console.log("transcript in initializemodel: ", transcript);
   const apiKey = await getApiKey();
   const genAI = new GoogleGenerativeAI(apiKey);
   try {
@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               transcriptDiv.textContent = 'Unexpected response format';
               return;
             }
-
+            chat = await initializeModelold();
             try {
               summarizeButton.style.display = 'none';
               transcriptDiv.innerHTML += '<h2>Summary</h2>'; // Print "Summary" before showing the summary
@@ -244,7 +244,6 @@ document.addEventListener('DOMContentLoaded', async () => {
               query: queryInput.value,
               transcriptHTML: transcriptDiv.innerHTML,
               summarizeButtonHidden: true,
-              // chat: chat
             };
             chrome.runtime.sendMessage({ type: 'setState', state: newState }, (response) => {
               if (response.status === 'success') {
@@ -353,3 +352,30 @@ async function chatStreaming(chat, query, transcriptDiv) {
   }
 }
 
+async function initializeModelold() {
+  try {
+    const apiKey = await getApiKey();
+    // console.log(apiKey);
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const safetySettings = [ 
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
+      // { category: HarmCategory.HARM_CATEGORY_UNSPECIFIED, threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE, },
+    ];
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash-002",
+      systemInstruction: {text: "user will provide you with the transcript of a video or the transcript for a segment of a video and your task is to give the summary of the video. the summary should contain the main topics covered in the video. If a user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor."},
+      safetySettings
+    });
+    const chat = model.startChat({
+      history: [],
+    });
+    return chat;
+  } catch (error) {
+    console.error('Error initializing model:', error);
+    displayError(`Error initializing model: ${error}`);
+    return null;
+  }
+}
