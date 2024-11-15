@@ -312,43 +312,17 @@ function displayError(message) {
 
 async function chatStreaming(chat, query, transcriptDiv) {
   let result = await chat.sendMessageStream(query);
-  
-  // Create a single container for all chunks
+
+  // Create a container for the response
   const responseContainer = document.createElement('span');
   transcriptDiv.appendChild(responseContainer);
-  
-  // Initialize an accumulator for partial markdown
-  let accumulatedMarkdown = '';
-  
+  let response = '';
   for await (const chunk of result.stream) {
-    const chunkText = chunk.text();
-    accumulatedMarkdown += chunkText;
-    
-    // Try to find complete markdown elements
-    const lastPeriodIndex = accumulatedMarkdown.lastIndexOf('.');
-    const lastNewlineIndex = accumulatedMarkdown.lastIndexOf('\n');
-    const breakPoint = Math.max(lastPeriodIndex, lastNewlineIndex);
-    
-    if (breakPoint !== -1) {
-      // Convert the complete portion to HTML and append
-      const completeMarkdown = accumulatedMarkdown.substring(0, breakPoint + 1);
-      const htmlContent = marked(completeMarkdown);
-      
-      // Strip outer paragraph tags if they exist
-      const strippedHtml = htmlContent.replace(/^<p>|<\/p>$/g, '');
-      
-      responseContainer.innerHTML += strippedHtml;
-      
-      // Keep the remainder for the next iteration
-      accumulatedMarkdown = accumulatedMarkdown.substring(breakPoint + 1);
-    }
-  }
-  
-  // Handle any remaining markdown at the end
-  if (accumulatedMarkdown) {
-    const htmlContent = marked(accumulatedMarkdown);
-    const strippedHtml = htmlContent.replace(/^<p>|<\/p>$/g, '');
-    responseContainer.innerHTML += strippedHtml;
+    const chunkText = await chunk.text();
+    response += chunkText;
+    // Convert markdown to HTML
+    let htmlContent = marked(response);
+    responseContainer.innerHTML = htmlContent;
   }
 }
 
