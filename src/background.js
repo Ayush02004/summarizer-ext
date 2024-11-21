@@ -3,19 +3,18 @@ import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/ge
 import { marked } from "marked";
 
 chrome.action.onClicked.addListener((tab) => {
-      chrome.sidePanel.open({ windowId: tab.windowId }).catch((error) => console.error(error));
+  chrome.sidePanel.open({ windowId: tab.windowId }).catch((error) => console.error(error));
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getTranscript") {
     const { url, start_time, end_time } = request;
-    // console.log("start time background: ", start_time);
-    // console.log("end time background: ", end_time);
+    console.log("Received getTranscript request with URL:", url);
     const enhancer = new YouTubeTranscriptEnhancer(url);
     enhancer.enhance_transcript(true, true, true, false, false, start_time, end_time).then(transcript => {
       sendResponse({ transcript });
     }).catch(error => {
-      console.error('Error enhancing transcript:', error);
+      console.error('Error enhancing transcript:', error, "URL:", url);
       sendResponse({ error: error.message });
     });
     return true; // Keep the message channel open for sendResponse
@@ -27,7 +26,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
       }
       const activeTab = tabs[0];
-      // console.log('Active Tab:', activeTab);
       if (!activeTab || !activeTab.id) {
         console.error('Active tab is undefined or has no id');
         sendResponse({ error: 'Active tab is undefined or has no id' });
@@ -38,7 +36,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         function: () => {
           const video = document.querySelector('video');
           if (video) {
-            // console.log('Video found:', video.currentTime);
             return { currentTime: video.currentTime };
           } else {
             return { error: 'No video found' };
@@ -70,5 +67,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ status: 'success' });
   }
 });
+
 export { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory };
 export { marked };

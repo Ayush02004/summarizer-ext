@@ -14,51 +14,80 @@ function getApiKey() {
   });
 }
 
-function fetchTranscript(start_time, end_time, transcriptDiv) {
+function fetchTranscript(start_time, end_time, transcriptDiv, maxRetries = 3) {
   return new Promise((resolve, reject) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const activeTab = tabs[0];
-      chrome.scripting.executeScript({
-        target: { tabId: activeTab.id },
-        function: getCurrentVideoUrl
-      }, (results) => {
-        if (chrome.runtime.lastError) {
-          console.error('Script execution failed:', chrome.runtime.lastError);
-          displayError(`Script execution failed: ${chrome.runtime.lastError.message}`);
-          reject(chrome.runtime.lastError);
-          return;
-        }
-        if (!results || results.length === 0 || !results[0].result) {
-          console.error('No results returned from script execution');
-          displayError('No results returned from script execution');
-          reject(new Error('No results returned from script execution'));
-          return;
-        }
-        const url = results[0].result.url;
-        chrome.runtime.sendMessage({ action: "getTranscript", url, start_time, end_time }, (response) => {
-          if (response.error) {
-            transcriptDiv.textContent = `Error: ${response.error}`;
-            reject(new Error(response.error));
-          } else {
-            let transcript;
-            if (typeof response.transcript === 'string') {
-              transcript = response.transcript;
-            } else if (Array.isArray(response.transcript)) {
-              transcript = response.transcript.map(item => item.text).join('\n');
-            } else {
-              transcriptDiv.textContent = 'Unexpected response format';
-              reject(new Error('Unexpected response format'));
-              return;
-            }
-            resolve(transcript);
+    let attempts = 0;
+
+    function tryExtractingUrl() {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const activeTab = tabs[0];
+        chrome.scripting.executeScript({
+          target: { tabId: activeTab.id },
+          function: getCurrentVideoUrl
+        }, (results) => {
+          if (chrome.runtime.lastError) {
+            const errorMessage = `Script execution failed: ${chrome.runtime.lastError.message}`;
+            console.error(errorMessage);
+            transcriptDiv.textContent = errorMessage;
+            reject(chrome.runtime.lastError);
+            return;
           }
+          if (!results || results.length === 0 || !results[0].result) {
+            const errorMessage = 'No results returned from script execution';
+            console.error(errorMessage);
+            transcriptDiv.textContent = errorMessage;
+            reject(new Error(errorMessage));
+            return;
+          }
+          const url = results[0].result.url;
+
+          // Check if the URL matches the YouTube video format
+          const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+$/;
+          if (!youtubeUrlPattern.test(url)) {
+            attempts++;
+            if (attempts < maxRetries) {
+              console.warn('URL is not a valid YouTube video URL, retrying...');
+              tryExtractingUrl();
+            } else {
+              const errorMessage = 'URL is not a valid YouTube video URL after multiple attempts';
+              console.error(errorMessage);
+              transcriptDiv.textContent = errorMessage;
+              reject(new Error(errorMessage));
+            }
+            return;
+          }
+
+          chrome.runtime.sendMessage({ action: "getTranscript", url, start_time, end_time }, (response) => {
+            if (response.error) {
+              const errorMessage = `Error: ${response.error}`;
+              console.error(errorMessage);
+              transcriptDiv.textContent = errorMessage;
+              reject(new Error(response.error));
+            } else {
+              let transcript;
+              if (typeof response.transcript === 'string') {
+                transcript = response.transcript;
+              } else if (Array.isArray(response.transcript)) {
+                transcript = response.transcript.map(item => item.text).join('\n');
+              } else {
+                const errorMessage = 'Unexpected response format';
+                console.error(errorMessage);
+                transcriptDiv.textContent = errorMessage;
+                reject(new Error(errorMessage));
+                return;
+              }
+              resolve(transcript);
+            }
+          });
         });
       });
-    });
+    }
+
+    tryExtractingUrl();
   });
 }
 
-async function initializeModel(start_time, end_time, transcriptDiv) {
+async function initializeModel(start_time, end_time, transcriptDiv, summary = false) {
   let transcript;
   try {
     transcript = await fetchTranscript(start_time, end_time, transcriptDiv);
@@ -66,7 +95,6 @@ async function initializeModel(start_time, end_time, transcriptDiv) {
     console.error('Error fetching transcript:', error);
     return null;
   }
-  // console.log("transcript in initializemodel: ", transcript);
   const apiKey = await getApiKey();
   const genAI = new GoogleGenerativeAI(apiKey);
   try {
@@ -77,7 +105,7 @@ async function initializeModel(start_time, end_time, transcriptDiv) {
       { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
     ];
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-1.5-pro",
       systemInstruction: {
         text: `provided the transcript of a video or the transcript for a segment of a video, your task is to answer the questions based on it. If the user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor. transcript: ${transcript}`
       },
@@ -95,6 +123,7 @@ async function initializeModel(start_time, end_time, transcriptDiv) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('DOMContentLoaded event fired');
   const summarizeButton = document.getElementById('summarize');
   const queryButton = document.getElementById('queryButton');
   const queryInput = document.getElementById('query');
@@ -106,16 +135,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   let end_time = null;
   
   optionsButton.addEventListener('click', () => {
+    console.log('Options button clicked');
     chrome.runtime.openOptionsPage();
   });
 
   // Initialize the model
-  let chat = await initializeModel(start_time, end_time);
-  // console.log("chat initialized ", chat);
+  let chat = await initializeModel(start_time, end_time, transcriptDiv);
   if (!chat) {
     console.error('Error initializing model');
     return;
   }
+  console.log('Chat initialized:', chat);
 
   // Request the current state from the background script
   chrome.runtime.sendMessage({ type: 'getState' }, (response) => {
@@ -130,11 +160,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Add event listener for the reload button
   reloadButton.addEventListener('click', async () => {
+    console.log('Reload button clicked');
     await resetState();
   });
 
   // Function to reset the state
   async function resetState() {
+    console.log('Resetting state');
     queryInput.value = '';
     transcriptDiv.innerHTML = '';
     summarizeButton.style.display = 'block';
@@ -142,11 +174,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     end_time = null;
     startTimeDiv.textContent = '';
     endTimeDiv.textContent = '';
-    // chat = await initializeModel();
   }
 
-
-  
   function formatTime(seconds) {
     if (seconds == 0){
       return '0 sec';
@@ -158,12 +187,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   startTimeButton.addEventListener('click', async () => {
+    console.log('Start time button clicked');
     chrome.runtime.sendMessage({ action: 'getVideoTimestamp' }, async (response) => {
       if (response.error) {
         startTimeDiv.textContent = response.error;
       } else {
         start_time = response.currentTime;
-        // console.log("start time popup sdioafoi: ", start_time);
         startTimeDiv.textContent = `Start Time: ${formatTime(start_time)}`;
       }
       if (end_time && start_time){
@@ -173,6 +202,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   endTimeButton.addEventListener('click', async () => {
+    console.log('End time button clicked');
     chrome.runtime.sendMessage({ action: 'getVideoTimestamp' }, async (response) => {
       if (response.error) {
         endTimeDiv.textContent = response.error;
@@ -180,107 +210,66 @@ document.addEventListener('DOMContentLoaded', async () => {
         end_time = response.currentTime;
         endTimeDiv.textContent = `End Time: ${formatTime(end_time)}`;
       }
-      // console.log("start time: ", start_time, "end time: ", end_time);
-  
       if (end_time && start_time) {
         chat = await initializeModel(start_time, end_time, transcriptDiv);
-        // console.log("chat in end time button: ", chat);
       }
     });
   });
 
   resetTimeButton.addEventListener('click', () => {
+    console.log('Reset time button clicked');
     start_time = null;
     startTimeDiv.textContent = '';
     end_time = null;
     endTimeDiv.textContent = '';
   });
 
-  summarizeButton.addEventListener('click', () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const activeTab = tabs[0];
-      chrome.scripting.executeScript({
-        target: { tabId: activeTab.id },
-        function: getCurrentVideoUrl
-      }, (results) => {
-        if (chrome.runtime.lastError) {
-          console.error('Script execution failed:', chrome.runtime.lastError);
-          displayError(`Script execution failed: ${chrome.runtime.lastError.message}`);
-          return;
-        }
-        if (!results || results.length === 0 || !results[0].result) {
-          console.error('No results returned from script execution');
-          displayError('No results returned from script execution');
-          return;
-        }
-        const url = results[0].result.url;
-        // console.log("start time popup: ", start_time);
-        // console.log("end time popup: ", end_time);
-        chrome.runtime.sendMessage({ action: "getTranscript", url, start_time, end_time }, async (response) => {
-          if (response.error) {
-            transcriptDiv.textContent = `Error: ${response.error}`;
-          } else {
-            let transcript;
-            if (typeof response.transcript === 'string') {
-              transcript = response.transcript;
-            } else if (Array.isArray(response.transcript)) {
-              transcript = response.transcript.map(item => item.text).join('\n');
-            } else {
-              transcriptDiv.textContent = 'Unexpected response format';
-              return;
-            }
-            chat = await initializeModelold();
-            try {
-              summarizeButton.style.display = 'none';
-              transcriptDiv.innerHTML += '<h2>Summary</h2>'; // Print "Summary" before showing the summary
-              await chatStreaming(chat, transcript, transcriptDiv);
-            } catch (error) {
-              console.error('Error getting summary:', error);
-              transcriptDiv.textContent = `Error: ${error.message}`;
-            }
-
-            // Update the state in the background script
-            const newState = {
-              query: queryInput.value,
-              transcriptHTML: transcriptDiv.innerHTML,
-              summarizeButtonHidden: true,
-            };
-            chrome.runtime.sendMessage({ type: 'setState', state: newState }, (response) => {
-              if (response.status === 'success') {
-                // console.log('State updated successfully');
-              }
-            });
-          }
-        });
-      });
+  summarizeButton.addEventListener('click', async () => {
+    console.log('Summarize button clicked');
+    try {
+      summarizeButton.style.display = 'none';
+      transcriptDiv.innerHTML += '<h2>Summary</h2>'; // Print "Summary" before showing the summary
+      await chatStreaming(chat, "summarize the video", transcriptDiv);
+    } catch (error) {
+      console.error('Error getting summary:', error);
+      transcriptDiv.textContent = `Error: ${error.message}`;
+    }
+  
+    // Update the state in the background script
+    const newState = {
+      query: queryInput.value,
+      transcriptHTML: transcriptDiv.innerHTML,
+      summarizeButtonHidden: true,
+    };
+    chrome.runtime.sendMessage({ type: 'setState', state: newState }, (response) => {
+      if (response.status === 'success') {
+        console.log('State updated successfully');
+      }
     });
   });
 
   queryButton.addEventListener('click', async () => {
+    console.log('Query button clicked');
     const query = queryInput.value.trim();
     if (query) {
-      // Clear the query input
       queryInput.value = '';
       queryButton.disabled = true;
-      transcriptDiv.innerHTML += `<p><strong>Query:</strong> ${query}</p>`; // Append the query to the transcriptDiv
+      transcriptDiv.innerHTML += `<p><strong>Query:</strong> ${query}</p>`;
       try {
-        await chatStreaming(chat, query, transcriptDiv); // Get the answer to the query and append it
+        await chatStreaming(chat, query, transcriptDiv);
       } catch (error) {
         console.error('Error getting query response:', error);
         transcriptDiv.innerHTML += `<p>Error: ${error.message}</p>`;
       }
 
-
-      // Update the state in the background script
       const newState = {
         query: queryInput.value,
         transcriptHTML: transcriptDiv.innerHTML,
         summarizeButtonHidden: summarizeButton.style.display === 'none',
-        // chat: chat
       };
       chrome.runtime.sendMessage({ type: 'setState', state: newState }, (response) => {
         if (response.status === 'success') {
-          // console.log('State updated successfully');
+          console.log('State updated successfully');
         }
       });
     }
@@ -297,7 +286,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   queryButton.disabled = queryInput.value.trim() === '';
-
 });
 
 function getCurrentVideoUrl() {
@@ -309,47 +297,16 @@ function displayError(message) {
   transcriptDiv.textContent = message;
 }
 
-
 async function chatStreaming(chat, query, transcriptDiv) {
   let result = await chat.sendMessageStream(query);
 
-  // Create a container for the response
   const responseContainer = document.createElement('span');
   transcriptDiv.appendChild(responseContainer);
   let response = '';
   for await (const chunk of result.stream) {
     const chunkText = await chunk.text();
     response += chunkText;
-    // Convert markdown to HTML
     let htmlContent = marked(response);
     responseContainer.innerHTML = htmlContent;
-  }
-}
-
-async function initializeModelold() {
-  try {
-    const apiKey = await getApiKey();
-    // console.log(apiKey);
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const safetySettings = [ 
-      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
-      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
-      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
-      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE, }, 
-      // { category: HarmCategory.HARM_CATEGORY_UNSPECIFIED, threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE, },
-    ];
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash-002",
-      systemInstruction: {text: "user will provide you with the transcript of a video or the transcript for a segment of a video and your task is to give the summary of the video. the summary should contain the main topics covered in the video. If a user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor."},
-      safetySettings
-    });
-    const chat = model.startChat({
-      history: [],
-    });
-    return chat;
-  } catch (error) {
-    console.error('Error initializing model:', error);
-    displayError(`Error initializing model: ${error}`);
-    return null;
   }
 }
