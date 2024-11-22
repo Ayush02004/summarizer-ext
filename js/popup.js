@@ -50,9 +50,9 @@ function fetchTranscript(start_time, end_time, transcriptDiv, maxRetries = 3) {
               tryExtractingUrl();
             } else {
               const errorMessage = 'URL is not a valid YouTube video URL after multiple attempts';
-              console.error(errorMessage);
+              console.warn(errorMessage);
               transcriptDiv.textContent = errorMessage;
-              reject(new Error(errorMessage));
+              resolve(null); // Resolve with null instead of rejecting
             }
             return;
           }
@@ -87,7 +87,7 @@ function fetchTranscript(start_time, end_time, transcriptDiv, maxRetries = 3) {
   });
 }
 
-async function initializeModel(start_time, end_time, transcriptDiv, summary = false) {
+async function initializeModel(start_time, end_time, transcriptDiv) {
   let transcript;
   try {
     transcript = await fetchTranscript(start_time, end_time, transcriptDiv);
@@ -134,18 +134,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   let start_time = null;
   let end_time = null;
   
+  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    // Check if the 'url' property exists in changeInfo
+    if (changeInfo.url) {
+      console.log(`Tab ${tabId} URL changed to: ${changeInfo.url}`);
+      const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+$/;
+      if (youtubeUrlPattern.test(changeInfo.url)) {
+        await resetState();
+      }
+    }
+  });
+
+
   optionsButton.addEventListener('click', () => {
     console.log('Options button clicked');
     chrome.runtime.openOptionsPage();
   });
 
   // Initialize the model
-  let chat = await initializeModel(start_time, end_time, transcriptDiv);
-  if (!chat) {
-    console.error('Error initializing model');
-    return;
-  }
-  console.log('Chat initialized:', chat);
+  let chat;
+  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+    const activeTab = tabs[0];
+    const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+$/;
+    if (youtubeUrlPattern.test(activeTab.url)) {
+      chat = await initializeModel(start_time, end_time, transcriptDiv);
+    }
+  });
+  
+  // if (!chat) {
+  //   console.error('Error initializing model');
+  //   return;
+  // }
+  // console.log('Chat initialized:', chat);
 
   // Request the current state from the background script
   chrome.runtime.sendMessage({ type: 'getState' }, (response) => {
@@ -174,6 +194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     end_time = null;
     startTimeDiv.textContent = '';
     endTimeDiv.textContent = '';
+    chat = await initializeModel(start_time, end_time, transcriptDiv);
   }
 
   function formatTime(seconds) {
