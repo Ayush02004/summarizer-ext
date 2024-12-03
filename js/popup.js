@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory, marked } from "../dist/compiled.js";
-
+const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+(&.*)?$/;
 function getApiKey() {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get(['apiKey'], (result) => {
@@ -39,10 +39,10 @@ function fetchTranscript(start_time, end_time, transcriptDiv, maxRetries = 3) {
             reject(new Error(errorMessage));
             return;
           }
-          const url = results[0].result.url;
+          let url = results[0].result.url;
 
           // Check if the URL matches the YouTube video format
-          const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+$/;
+          // const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+$/;
           if (!youtubeUrlPattern.test(url)) {
             attempts++;
             if (attempts < maxRetries) {
@@ -56,7 +56,9 @@ function fetchTranscript(start_time, end_time, transcriptDiv, maxRetries = 3) {
             }
             return;
           }
-
+          const urlObj = new URL(url);
+          console.log(url);
+          url = "https://www.youtube.com/watch?v=" + urlObj.searchParams.get('v');
           chrome.runtime.sendMessage({ action: "getTranscript", url, start_time, end_time }, (response) => {
             if (response.error) {
               const errorMessage = `Error: ${response.error}`;
@@ -138,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check if the 'url' property exists in changeInfo
     if (changeInfo.url) {
       console.log(`Tab ${tabId} URL changed to: ${changeInfo.url}`);
-      const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+$/;
+      // const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+$/;
       if (youtubeUrlPattern.test(changeInfo.url)) {
         await resetState();
       }
@@ -155,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let chat;
   chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
     const activeTab = tabs[0];
-    const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+$/;
+    // const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+$/;
     if (youtubeUrlPattern.test(activeTab.url)) {
       chat = await initializeModel(start_time, end_time, transcriptDiv);
     }
@@ -189,7 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('Resetting state');
     queryInput.value = '';
     transcriptDiv.innerHTML = '';
-    summarizeButton.style.display = 'block';
+    summarizeButton.style.display = 'inline-block;';
     start_time = null;
     end_time = null;
     startTimeDiv.textContent = '';
