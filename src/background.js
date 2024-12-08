@@ -2,14 +2,10 @@ import { YouTubeTranscriptEnhancer } from './transcript.js';
 import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
 import { marked } from "marked";
 
-chrome.action.onClicked.addListener((tab) => {
-  chrome.sidePanel.open({ windowId: tab.windowId }).catch((error) => console.error(error));
-});
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getTranscript") {
     const { url, start_time, end_time } = request;
-    console.log("Received getTranscript request with URL:", url);
+    // console.log("Received getTranscript request with URL:", url);
     const enhancer = new YouTubeTranscriptEnhancer(url);
     enhancer.enhance_transcript(true, true, true, false, false, start_time, end_time).then(transcript => {
       sendResponse({ transcript });

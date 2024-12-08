@@ -57,7 +57,7 @@ function fetchTranscript(start_time, end_time, transcriptDiv, maxRetries = 3) {
             return;
           }
           const urlObj = new URL(url);
-          console.log(url);
+          // console.log(url);
           url = "https://www.youtube.com/watch?v=" + urlObj.searchParams.get('v');
           chrome.runtime.sendMessage({ action: "getTranscript", url, start_time, end_time }, (response) => {
             if (response.error) {
@@ -125,7 +125,7 @@ async function initializeModel(start_time, end_time, transcriptDiv) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('DOMContentLoaded event fired');
+  // console.log('DOMContentLoaded event fired');
   const summarizeButton = document.getElementById('summarize');
   const queryButton = document.getElementById('queryButton');
   const queryInput = document.getElementById('query');
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     // Check if the 'url' property exists in changeInfo
     if (changeInfo.url) {
-      console.log(`Tab ${tabId} URL changed to: ${changeInfo.url}`);
+      // console.log(`Tab ${tabId} URL changed to: ${changeInfo.url}`);
       // const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+$/;
       if (youtubeUrlPattern.test(changeInfo.url)) {
         await resetState();
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
   optionsButton.addEventListener('click', () => {
-    console.log('Options button clicked');
+    // console.log('Options button clicked');
     chrome.runtime.openOptionsPage();
   });
 
@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Add event listener for the reload button
   reloadButton.addEventListener('click', async () => {
-    console.log('Reload button clicked');
+    // console.log('Reload button clicked');
     await resetState();
   });
 
@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   startTimeButton.addEventListener('click', async () => {
-    console.log('Start time button clicked');
+    // console.log('Start time button clicked');
     chrome.runtime.sendMessage({ action: 'getVideoTimestamp' }, async (response) => {
       if (response.error) {
         startTimeDiv.textContent = response.error;
@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   endTimeButton.addEventListener('click', async () => {
-    console.log('End time button clicked');
+    // console.log('End time button clicked');
     chrome.runtime.sendMessage({ action: 'getVideoTimestamp' }, async (response) => {
       if (response.error) {
         endTimeDiv.textContent = response.error;
@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   resetTimeButton.addEventListener('click', () => {
-    console.log('Reset time button clicked');
+    // console.log('Reset time button clicked');
     start_time = null;
     startTimeDiv.textContent = '';
     end_time = null;
@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   summarizeButton.addEventListener('click', async () => {
-    console.log('Summarize button clicked');
+    // console.log('Summarize button clicked');
     try {
       summarizeButton.style.display = 'none';
       transcriptDiv.innerHTML += '<h2>Summary</h2>'; // Print "Summary" before showing the summary
@@ -266,13 +266,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     chrome.runtime.sendMessage({ type: 'setState', state: newState }, (response) => {
       if (response.status === 'success') {
-        console.log('State updated successfully');
+        // console.log('State updated successfully');
       }
     });
   });
 
   queryButton.addEventListener('click', async () => {
-    console.log('Query button clicked');
+    // console.log('Query button clicked');
     const query = queryInput.value.trim();
     if (query) {
       queryInput.value = '';
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       };
       chrome.runtime.sendMessage({ type: 'setState', state: newState }, (response) => {
         if (response.status === 'success') {
-          console.log('State updated successfully');
+          // console.log('State updated successfully');
         }
       });
     }

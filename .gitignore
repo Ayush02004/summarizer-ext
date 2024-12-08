@@ -1,3 +1,4 @@
 .env
 not ext/
 node_modules/
+todo
