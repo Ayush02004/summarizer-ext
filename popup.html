@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Popup</title>
   <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -12,14 +13,79 @@
       color: #000;
       background-color: #fff;
     }
+    .hidden {
+      display: none;
+    }
+    .segment-section {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+      margin-left: 20px; /* Indentation to show it is part of the select segment */
+    }
+    .segment-section.show {
+      max-height: 500px; /* Adjust this value as needed */
+      padding: 10px 0;
+    }
+    .btn-primary {
+      background-color: #007bff;
+      border-color: #007bff;
+      color: #fff;
+    }
+    .btn-secondary {
+      background-color: #6c757d;
+      border-color: #6c757d;
+      color: #fff;
+    }
+    .btn-info {
+      background-color: #17a2b8;
+      border-color: #17a2b8;
+      color: #fff;
+    }
+    .btn-warning {
+      background-color: #ffc107;
+      border-color: #ffc107;
+      color: #212529;
+    }
+    .btn-success {
+      background-color: #28a745;
+      border-color: #28a745;
+      color: #fff;
+    }
+    .btn-danger {
+      background-color: #dc3545;
+      border-color: #dc3545;
+      color: #fff;
+    }
+    .btn-outline-secondary {
+      background-color: transparent;
+      color: #007bff;
+    }
+    .btn-outline-secondary:hover {
+      background-color: #007bff;
+      color: #fff;
+    }
+    .btn-primary:hover, .btn-secondary:hover, .btn-info:hover, .btn-warning:hover, .btn-success:hover, .btn-danger:hover {
+      opacity: 0.8;
+    }
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
     /* Your existing styles */
   </style>
 </head>
 <body>
   <div class="container mt-3">
     <div class="mb-3">
-      <button id="reloadButton" class="btn btn-primary">Refresh</button>
-      <button id="summarize" class="btn btn-secondary">Summarize</button>
+      <button id="reloadButton" class="btn btn-secondary">
+        <i id="reloadIcon" class="fas fa-sync-alt"></i> Refresh
+      </button>
+      <button id="summarize" class="btn btn-primary">
+        <img src="ai-technology.png" alt="AI" style="width: 16px; height: 16px; margin-right: 5px;"> Summarize
+      </button>
     </div>
     <div id="transcript" class="mb-3"></div>
     <div class="query-container mb-3">
@@ -29,17 +95,26 @@
       </div>
     </div>
     <div class="button-container mb-3">
-      <button id="optionsButton" class="btn btn-info">Settings</button>
+      <button id="optionsButton" class="btn btn-info">API Settings</button>
     </div>
-    <div class="inline-container mb-3">
-      <button id="startTimeButton" class="btn btn-success">Start time</button>
-      <div id="startTime" class="ms-2"></div>
+    <div class="button-container mb-3">
+      <button id="toggleSegmentButton" class="btn btn-warning">
+        <i id="toggleIcon" class="fas fa-plus"></i> Select Particular Segment
+      </button>
     </div>
-    <div class="inline-container mb-3">
-      <button id="endTimeButton" class="btn btn-danger">End time</button>
-      <div id="endTime" class="ms-2"></div>
+    <div id="segmentSection" class="segment-section">
+      <div class="inline-container mb-3">
+        <button id="startTimeButton" class="btn btn-success">Select Start time</button>
+        <div id="startTime" class="ms-2"></div>
+      </div>
+      <div class="inline-container mb-3">
+        <button id="endTimeButton" class="btn btn-danger">Select End time</button>
+        <div id="endTime" class="ms-2"></div>
+      </div>
+      <button id="resettime" class="btn btn-secondary">
+        <i id="reloadIcon" class="fas fa-sync-alt"></i> Reset Time
+      </button>
     </div>
-    <button id="resettime" class="btn btn-warning">Reset</button>
   </div>
   <script src="js/bootstrap.bundle.min.js"></script>
   <script type="module" src="js/popup.js"></script>

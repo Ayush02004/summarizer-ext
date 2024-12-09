@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory, marked } from "../dist/compiled.js";
 const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+(&.*)?$/;
-function getApiKey() {
+
+function getApiKey(transcriptDiv) {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get(['apiKey'], (result) => {
       if (chrome.runtime.lastError) {
@@ -8,7 +9,10 @@ function getApiKey() {
       } else if (result.apiKey) {
         resolve(result.apiKey); // Return the API key if it exists
       } else {
-        reject('API key not found'); // Handle missing key
+        const errorMessage = 'API key not found. Add the API key by clicking the settings button below.';
+        transcriptDiv.textContent = errorMessage; // Display the message
+        transcriptDiv.style.color = 'red'; // Set the text color to red
+        reject(errorMessage); // Handle missing key
       }
     });
   });
@@ -97,7 +101,7 @@ async function initializeModel(start_time, end_time, transcriptDiv) {
     console.error('Error fetching transcript:', error);
     return null;
   }
-  const apiKey = await getApiKey();
+  const apiKey = await getApiKey(transcriptDiv);
   const genAI = new GoogleGenerativeAI(apiKey);
   try {
     const safetySettings = [ 
@@ -125,7 +129,11 @@ async function initializeModel(start_time, end_time, transcriptDiv) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // console.log('DOMContentLoaded event fired');
+  const toggleSegmentButton = document.getElementById('toggleSegmentButton');
+  const segmentSection = document.getElementById('segmentSection');
+  const toggleIcon = document.getElementById('toggleIcon');
+  const reloadButton = document.getElementById('reloadButton');
+  const reloadIcon = document.getElementById('reloadIcon');
   const summarizeButton = document.getElementById('summarize');
   const queryButton = document.getElementById('queryButton');
   const queryInput = document.getElementById('query');
@@ -135,6 +143,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   const resetTimeButton = document.getElementById('resettime');
   let start_time = null;
   let end_time = null;
+
+  // reloadButton.addEventListener('click', () => {
+  //   reloadIcon.classList.add('spin');
+  //   setTimeout(() => {
+  //     reloadIcon.classList.remove('spin');
+  //   }, 1000); // Duration of the spin animation
+  // });
+  // resetTimeButton.addEventListener('click', () => {
+  //   reloadIcon.classList.add('spin');
+  //   setTimeout(() => {
+  //     reloadIcon.classList.remove('spin');
+  //   }, 1000); // Duration of the spin animation
+  // });
+
+  toggleSegmentButton.addEventListener('click', () => {
+    if (segmentSection.classList.contains('show')) {
+      segmentSection.classList.remove('show');
+      toggleIcon.classList.remove('fa-minus');
+      toggleIcon.classList.add('fa-plus');
+    } else {
+      segmentSection.classList.add('show');
+      toggleIcon.classList.remove('fa-plus');
+      toggleIcon.classList.add('fa-minus');
+    }
+  });
+  // console.log('DOMContentLoaded event fired');
+  
   
   chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     // Check if the 'url' property exists in changeInfo
@@ -188,10 +223,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Function to reset the state
   async function resetState() {
-    console.log('Resetting state');
+    // console.log('Resetting state');
     queryInput.value = '';
     transcriptDiv.innerHTML = '';
-    summarizeButton.style.display = 'inline-block;';
+    summarizeButton.style.display = 'inline-block';
     start_time = null;
     end_time = null;
     startTimeDiv.textContent = '';
@@ -200,7 +235,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function formatTime(seconds) {
-    if (seconds == 0){
+    if (seconds == 0 || seconds<1){
       return '0 sec';
     }
     const hrs = Math.floor(seconds / 3600);
@@ -216,6 +251,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         startTimeDiv.textContent = response.error;
       } else {
         start_time = response.currentTime;
+        // console.log("start_time:",start_time);
         startTimeDiv.textContent = `Start Time: ${formatTime(start_time)}`;
       }
       if (end_time && start_time){
