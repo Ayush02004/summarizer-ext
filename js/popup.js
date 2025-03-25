@@ -1,18 +1,18 @@
 import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory, marked } from "../dist/compiled.js";
 const youtubeUrlPattern = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]+(&.*)?$/;
 
-function getApiKey(transcriptDiv) {
+function getApiKeyAndModelName(transcriptDiv) {
   return new Promise((resolve, reject) => {
-    chrome.storage.local.get(['apiKey'], (result) => {
+    chrome.storage.local.get(['apiKey', 'modelName'], (result) => {
       if (chrome.runtime.lastError) {
         reject(chrome.runtime.lastError); // Handle any errors
-      } else if (result.apiKey) {
-        resolve(result.apiKey); // Return the API key if it exists
+      } else if (result.apiKey && result.modelName) {
+        resolve({ apiKey: result.apiKey, modelName: result.modelName }); // Return the API key and model name if they exist
       } else {
-        const errorMessage = 'API key not found. Add the API key by clicking the settings button below.';
+        const errorMessage = 'API key or model name not found. Add them by clicking the settings button below.';
         transcriptDiv.textContent = errorMessage; // Display the message
         transcriptDiv.style.color = 'red'; // Set the text color to red
-        reject(errorMessage); // Handle missing key
+        reject(errorMessage); // Handle missing key or model name
       }
     });
   });
@@ -101,7 +101,7 @@ async function initializeModel(start_time, end_time, transcriptDiv) {
     console.error('Error fetching transcript:', error);
     return null;
   }
-  const apiKey = await getApiKey(transcriptDiv);
+  const { apiKey, modelName } = await getApiKeyAndModelName(transcriptDiv);
   const genAI = new GoogleGenerativeAI(apiKey);
   try {
     const safetySettings = [ 
@@ -110,10 +110,19 @@ async function initializeModel(start_time, end_time, transcriptDiv) {
       { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE }, 
       { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
     ];
+    const search = document.getElementById('searchToggle').checked;
+    // console.log(search);
+    const searchprompt = search ? "If the user asks you to fact check the video extract the facts from the video search the web for facts or use your own knowledge. " : "";
+    const searchtool = search ? [
+      {
+        "googleSearch": {}
+      }
+    ] : [];
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-pro",
+      model: modelName,
+      tools: searchtool,
       systemInstruction: {
-        text: `provided the transcript of a video or the transcript for a segment of a video, your task is to answer the questions based on it. If the user asks about any questions about the video use the transcript to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video/transcript is too big. If there are any sponsor you should ignore them unless the user asks about the sponsor. transcript: ${transcript}`
+        text: `provided the transcript of a video or the transcript for a segment of a video, your task is to answer the questions based on it. If the user asks about any questions about the video use the video to give an appropriate answer. If segment details for a video are provided you may use them to provide a better summary if you feel the video is too big. ${searchprompt}video: ${transcript}`
       },
       safetySettings
     });
@@ -143,33 +152,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const resetTimeButton = document.getElementById('resettime');
   let start_time = null;
   let end_time = null;
-
-  // reloadButton.addEventListener('click', () => {
-  //   reloadIcon.classList.add('spin');
-  //   setTimeout(() => {
-  //     reloadIcon.classList.remove('spin');
-  //   }, 1000); // Duration of the spin animation
-  // });
-  // resetTimeButton.addEventListener('click', () => {
-  //   reloadIcon.classList.add('spin');
-  //   setTimeout(() => {
-  //     reloadIcon.classList.remove('spin');
-  //   }, 1000); // Duration of the spin animation
-  // });
-
-  toggleSegmentButton.addEventListener('click', () => {
-    if (segmentSection.classList.contains('show')) {
-      segmentSection.classList.remove('show');
-      toggleIcon.classList.remove('fa-minus');
-      toggleIcon.classList.add('fa-plus');
-    } else {
-      segmentSection.classList.add('show');
-      toggleIcon.classList.remove('fa-plus');
-      toggleIcon.classList.add('fa-minus');
-    }
-  });
-  // console.log('DOMContentLoaded event fired');
-  
   
   chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     // Check if the 'url' property exists in changeInfo
@@ -181,14 +163,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   });
-
-
-  optionsButton.addEventListener('click', () => {
-    // console.log('Options button clicked');
-    chrome.runtime.openOptionsPage();
-  });
-
-  // Initialize the model
   let chat;
   chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
     const activeTab = tabs[0];
@@ -197,6 +171,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       chat = await initializeModel(start_time, end_time, transcriptDiv);
     }
   });
+  
+  toggleSegmentButton.addEventListener('click', () => {
+    if (segmentSection.classList.contains('show')) {
+      segmentSection.classList.remove('show');
+      toggleIcon.classList.remove('fa-minus');
+      toggleIcon.classList.add('fa-plus');
+    } else {
+      segmentSection.classList.add('show');
+      toggleIcon.classList.remove('fa-plus');
+      toggleIcon.classList.add('fa-minus');
+    }
+  });
+
+  searchToggle.addEventListener('change', async () => {
+    // Reinitialize chat with updated search settings
+    chat = await initializeModel(start_time, end_time, transcriptDiv);
+    
+  });
+  
+
+
+  optionsButton.addEventListener('click', () => {
+    // console.log('Options button clicked');
+    chrome.runtime.openOptionsPage();
+  });
+
+  // Initialize the model
   
   // if (!chat) {
   //   console.error('Error initializing model');

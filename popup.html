@@ -74,18 +74,105 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    /* Your existing styles */
+    
+    /* Toggle Switch Styles */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 28px;
+      vertical-align: middle;
+      margin: 0 8px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+    }
+
+    input:checked + .slider {
+      background-color: #007bff;
+    }
+
+    input:focus + .slider {
+      box-shadow: 0 0 1px #007bff;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(32px);
+    }
+
+    .slider.round {
+      border-radius: 28px;
+    }
+
+    .slider.round:before {
+      border-radius: 50%;
+    }
+    
+    .switch-label {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 10px;
+    }
+    
+    .mode-label {
+      font-size: 14px;
+      font-weight: 500;
+      margin-right: 5px;
+    }
+
+    .switch .slider.round:before {
+      height: 16px;
+      width: 16px;
+      bottom: 4px;
+      left: 4px;
+    }
+  
+    input:checked + .slider.round:before {
+      transform: translateX(26px);
+    }
   </style>
 </head>
 <body>
-  <div class="container mt-3">
-    <div class="mb-3">
-      <button id="reloadButton" class="btn btn-secondary">
+  <div class="card border-0 shadow-sm p-3 my-3">
+    <div class="mb-3 d-flex align-items-center">
+      <button id="reloadButton" class="btn btn-secondary me-2">
         <i id="reloadIcon" class="fas fa-sync-alt"></i> Refresh
       </button>
-      <button id="summarize" class="btn btn-primary">
+      <button id="summarize" class="btn btn-primary me-2">
         <img src="ai-technology.png" alt="AI" style="width: 16px; height: 16px; margin-right: 5px;"> Summarize
       </button>
+      <div class="switch-label d-inline-flex align-items-center">
+        <span class="mode-label small">Search</span>
+        <label class="switch" style="width: 50px; height: 24px; margin: 0 4px;">
+          <input type="checkbox" id="searchToggle">
+          <span class="slider round" style="height: 24px;"></span>
+        </label>
+      </div>
     </div>
     <div id="transcript" class="mb-3"></div>
     <div class="query-container mb-3">
